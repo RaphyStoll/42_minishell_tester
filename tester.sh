@@ -38,22 +38,22 @@ main() {
 				TESTFILES+=" ${RUNDIR}/cmds/mand/1_redirs.sh"
 				;;
 			"pipelines" | "pi")
-				TESTFILES+=" ${RUNDIR}/cmds/mand/1_pipeline.sh"
+				TESTFILES+=" ${RUNDIR}/cmds/mand/1_pipelines.sh"
 				;;
 			"cmds" | "c")
-				TESTFILES+=" ${RUNDIR}/cmds/mand/1_scmd.sh"
+				TESTFILES+=" ${RUNDIR}/cmds/mand/1_scmds.sh"
 				;;
 			"variables" | "v")
 				TESTFILES+=" ${RUNDIR}/cmds/mand/1_variables.sh"
 				;;
 			"corrections" | "co")
-				TESTFILES+=" ${RUNDIR}/cmds/mand/1_corrections.sh"
+				TESTFILES+=" ${RUNDIR}/cmds/mand/2_correction.sh"
 				;;
 			"path")
-				TESTFILES+=" ${RUNDIR}/cmds/mand/1_path_check.sh"
+				TESTFILES+=" ${RUNDIR}/cmds/mand/2_path_check.sh"
 				;;
 			"syntax" | "s")
-				TESTFILES+=" ${RUNDIR}/cmds/mand/1_syntax_errors.sh"
+				TESTFILES+=" ${RUNDIR}/cmds/mand/8_syntax_errors.sh"
 				;;
 		esac
 		shift
