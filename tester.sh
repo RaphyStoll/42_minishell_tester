@@ -1,8 +1,17 @@
 #!/bin/bash
+# Capture the directory from which mstest is invoked as minishell root
+INVOKED_PWD=$(pwd)
+export MINISHELL_PATH="${MINISHELL_PATH:-$INVOKED_PWD}"
 
 # Change if you store the tester in another PATH
-export MINISHELL_PATH=./
-export EXECUTABLE=minishell
+ # Determine default minishell path (parent of tester) or use override
+ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ # export MINISHELL_PATH="${MINISHELL_PATH:-"$SCRIPT_DIR/../minishell"}"
+export LOG=output/
+# Timestamp for this test run
+# Use ISO-like format with hyphens and underscores for clarity
+export TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+export EXECUTABLE=output/minishell
 RUNDIR=$HOME/42_minishell_tester
 
 NL=$'\n'
@@ -23,7 +32,9 @@ LEAKS=0
 TESTFILES=""
 COMMAND=$1
 
-main() {
+	main() {
+		# Redirect all output to the master log file as well
+		
 	while [ -n "$2" ]
 	do
 		case $2 in
@@ -113,12 +124,11 @@ main() {
 		echo "If the part list is empty, everything will be tested."
 
 	fi
-	if [[ $TEST_COUNT -gt 0 ]] ; then
-		print_stats
-	fi
 	# \_o_/ this is my ananas.jpeg \_o_/
-	rm -rf test
-}
+		rm -rf test
+		# Print summary statistics
+		print_stats
+	}
 
 test_no_env() {
 	FILES="${RUNDIR}/cmds/no_env/*"
@@ -175,50 +185,18 @@ test_bonus() {
 	done
 }
 
-
-
-print_stats() {
-	echo "🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁"
-	echo -e "🏁                                    \033[1;31mRESULT\033[m                                    🏁"
-	echo "🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁"
-	printf "\033[1;35m%-4s\033[m" "             TOTAL TEST COUNT: $TEST_COUNT "
-	printf "\033[1;32m TESTS PASSED: $GOOD_TEST\033[m "
-	if [[ $LEAKS == 0 ]] ; then
-		printf "\033[1;32m LEAKING: $LEAKS\033[m "
-	else
-		printf "\033[1;31m LEAKING: $LEAKS\033[m "
-	fi
-	echo ""
-	echo -ne "\033[1;34m                     STD_OUT:\033[m "
-	if [[ $TEST_KO_OUT == 0 ]] ; then
-		echo -ne "\033[1;32m✓ \033[m  "
-	else
-		echo -ne "\033[1;31m$TEST_KO_OUT\033[m  "
-	fi
-	echo -ne "\033[1;36mSTD_ERR:\033[m "
-	if [[ $TEST_KO_ERR == 0 ]] ; then
-		echo -ne "\033[1;32m✓ \033[m  "
-	else
-		echo -ne "\033[1;31m$TEST_KO_ERR\033[m  "
-	fi
-	echo -ne "\033[1;36mEXIT_CODE:\033[m "
-	if [[ $TEST_KO_EXIT == 0 ]] ; then
-		echo -ne "\033[1;32m✓ \033[m  "
-	else
-		echo -ne "\033[1;31m$TEST_KO_EXIT\033[m  "
-	fi
-	echo ""
-	echo -e "\033[1;33m                         TOTAL FAILED AND PASSED CASES:"
-	echo -e "\033[1;31m                                     ❌ $FAILED \033[m  "
-	echo -ne "\033[1;32m                                     ✅ $TEST_OK \033[m  "
-	echo ""
-}
-
 test_from_file() {
 	IFS=''
 	i=1
 	end_of_file=0
 	line_count=0
+	# Determine section name and prepare output directory
+	base=$(basename "$1" .sh)
+	section=${base#*_}
+	section_upper=$(echo "$section" | tr '[:lower:]' '[:upper:]')
+	# Create a timestamped log directory inside the minishell project
+	output_dir="${MINISHELL_PATH}/${LOG}mstest_log_${TIMESTAMP}/${section_upper}"
+	mkdir -p "$output_dir"
 	while [[ $end_of_file == 0 ]] ;
 	do
 		read -r line
@@ -252,17 +230,27 @@ test_from_file() {
 				echo -ne "❌  " | tr '\n' ' '
 				((TEST_KO_OUT++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
 				((ONE++))
 			fi
-			echo -ne "\033[1;33mSTD_ERR:\033[m "
+			echo -ne "\033[1;36mSTD_ERR:\033[m "
 			if [[ -s tmp_err_minishell && ! -s tmp_err_bash ]] || [[ ! -s tmp_err_minishell && -s tmp_err_bash ]] ;
 			then
 				echo -ne "❌  " |  tr '\n' ' '
 				((TEST_KO_ERR++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -274,6 +262,11 @@ test_from_file() {
 				echo -ne "❌\033[1;31m [ minishell($exit_minishell)  bash($exit_bash) ]\033[m  " | tr '\n' ' '
 				((TEST_KO_EXIT++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -303,6 +296,13 @@ test_leaks() {
 	i=1
 	end_of_file=0
 	line_count=0
+	# Determine section name and prepare output directory
+	base=$(basename "$1" .sh)
+	section=${base#*_}
+	section_upper=$(echo "$section" | tr '[:lower:]' '[:upper:]')
+	# Create a timestamped log directory inside the minishell project
+	output_dir="${MINISHELL_PATH}/${LOG}${TIMESTAMP}/${section_upper}"
+	mkdir -p "$output_dir"
 	while [[ $end_of_file == 0 ]] ;
 	do
 		read -r line
@@ -336,6 +336,11 @@ test_leaks() {
 				echo -ne "❌  " | tr '\n' ' '
 				((TEST_KO_OUT++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -347,6 +352,11 @@ test_leaks() {
 				echo -ne "❌  " |  tr '\n' ' '
 				((TEST_KO_ERR++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -358,6 +368,11 @@ test_leaks() {
 				echo -ne "❌\033[1;31m [ minishell($exit_minishell)  bash($exit_bash) ]\033[m  " | tr '\n' ' '
 				((TEST_KO_EXIT++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -405,6 +420,13 @@ test_without_env() {
 	i=1
 	end_of_file=0
 	line_count=0
+	# Determine section name and prepare output directory
+	base=$(basename "$1" .sh)
+	section=${base#*_}
+	section_upper=$(echo "$section" | tr '[:lower:]' '[:upper:]')
+	# Create a timestamped log directory inside the minishell project
+	output_dir="${MINISHELL_PATH}/${LOG}${TIMESTAMP}/${section_upper}"
+	mkdir -p "$output_dir"
 	while [[ $end_of_file == 0 ]] ;
 	do
 		read -r line
@@ -438,6 +460,11 @@ test_without_env() {
 				echo -ne "❌  " | tr '\n' ' '
 				((TEST_KO_OUT++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -449,6 +476,11 @@ test_without_env() {
 				echo -ne "❌  " |  tr '\n' ' '
 				((TEST_KO_ERR++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -460,6 +492,11 @@ test_without_env() {
 				echo -ne "❌\033[1;31m [ minishell($exit_minishell)  bash($exit_bash) ]\033[m  " | tr '\n' ' '
 				((TEST_KO_EXIT++))
 				((FAILED++))
+				# Save failing outputs for this test case
+				cat tmp_out_minishell > "${output_dir}/${i}.out"
+				cat tmp_err_minishell > "${output_dir}/${i}.err"
+				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
+				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -484,7 +521,43 @@ test_without_env() {
 	done < "$1"
 }
 
-# Start the tester
+print_stats() {
+	echo "🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁"
+	echo -e "🏁                                    \033[1;31mRESULT\033[m                                    🏁"
+	echo "🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁🏁"
+	printf "\033[1;35m%-4s\033[m" "             TOTAL TEST COUNT: $TEST_COUNT "
+	printf "\033[1;32m TESTS PASSED: $GOOD_TEST\033[m "
+	if [[ $LEAKS == 0 ]] ; then
+		printf "\033[1;32m LEAKING: $LEAKS\033[m "
+	else
+		printf "\033[1;31m LEAKING: $LEAKS\033[m "
+	fi
+	echo ""
+	echo -ne "\033[1;34m                     STD_OUT:\033[m "
+	if [[ $TEST_KO_OUT == 0 ]] ; then
+		echo -ne "\033[1;32m✓ \033[m  "
+	else
+		echo -ne "\033[1;31m$TEST_KO_OUT\033[m  "
+	fi
+	echo -ne "\033[1;36mSTD_ERR:\033[m "
+	if [[ $TEST_KO_ERR == 0 ]] ; then
+		echo -ne "\033[1;32m✓ \033[m  "
+	else
+		echo -ne "\033[1;31m$TEST_KO_ERR\033[m  "
+	fi
+	echo -ne "\033[1;36mEXIT_CODE:\033[m "
+	if [[ $TEST_KO_EXIT == 0 ]] ; then
+		echo -ne "\033[1;32m✓ \033[m  "
+	else
+		echo -ne "\033[1;31m$TEST_KO_EXIT\033[m  "
+	fi
+	echo ""
+	echo -e "\033[1;33m                         TOTAL FAILED AND PASSED CASES:"
+	echo -e "\033[1;31m                                     ❌ $FAILED \033[m  "
+	echo -ne "\033[1;32m                                     ✅ $TEST_OK \033[m  "
+	echo ""
+}
+	# Start the tester
 main "$@"
 
 # Clean all tmp files
