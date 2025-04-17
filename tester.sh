@@ -11,6 +11,10 @@ export LOG=output/
 # Timestamp for this test run
 # Use ISO-like format with hyphens and underscores for clarity
 export TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+ 
+# Define and create run-specific log directory (same as section root)
+RUN_LOG_DIR="${MINISHELL_PATH}/${LOG}mstest_log_${TIMESTAMP}"
+mkdir -p "$RUN_LOG_DIR"
 export EXECUTABLE=output/minishell
 RUNDIR=$HOME/42_minishell_tester
 
@@ -33,6 +37,8 @@ TESTFILES=""
 COMMAND=$1
 
 	main() {
+		# Redirect tester STDOUT to both terminal and log file
+		exec > >(tee -a "${RUN_LOG_DIR}/tester_stdout.log")
 		# Redirect all output to the master log file as well
 		
 	while [ -n "$2" ]
@@ -234,7 +240,14 @@ test_from_file() {
 				cat tmp_out_minishell > "${output_dir}/${i}.out"
 				cat tmp_err_minishell > "${output_dir}/${i}.err"
 				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
-				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
+			cat tmp_err_bash > "${output_dir}/${i}.expected_err"
+			# Generate unified diffs for this test case
+			diff -u tmp_out_bash tmp_out_minishell > "${output_dir}/${i}.out.diff" || true
+			diff -u tmp_err_bash  tmp_err_minishell  > "${output_dir}/${i}.err.diff" || true
+			echo "---- Diff STDOUT for test $i ----"
+			diff -u tmp_out_bash tmp_out_minishell | sed 's/^/    /'
+			echo "---- Diff STDERR for test $i ----"
+			diff -u tmp_err_bash tmp_err_minishell | sed 's/^/    /'
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -250,7 +263,14 @@ test_from_file() {
 				cat tmp_out_minishell > "${output_dir}/${i}.out"
 				cat tmp_err_minishell > "${output_dir}/${i}.err"
 				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
-				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
+			cat tmp_err_bash > "${output_dir}/${i}.expected_err"
+			# Generate unified diffs for this test case
+			diff -u tmp_out_bash tmp_out_minishell > "${output_dir}/${i}.out.diff" || true
+			diff -u tmp_err_bash  tmp_err_minishell  > "${output_dir}/${i}.err.diff" || true
+			echo "---- Diff STDOUT for test $i ----"
+			diff -u tmp_out_bash tmp_out_minishell | sed 's/^/    /'
+			echo "---- Diff STDERR for test $i ----"
+			diff -u tmp_err_bash tmp_err_minishell | sed 's/^/    /'
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
@@ -266,7 +286,14 @@ test_from_file() {
 				cat tmp_out_minishell > "${output_dir}/${i}.out"
 				cat tmp_err_minishell > "${output_dir}/${i}.err"
 				cat tmp_out_bash > "${output_dir}/${i}.expected_out"
-				cat tmp_err_bash > "${output_dir}/${i}.expected_err"
+			cat tmp_err_bash > "${output_dir}/${i}.expected_err"
+			# Generate unified diffs for this test case
+			diff -u tmp_out_bash tmp_out_minishell > "${output_dir}/${i}.out.diff" || true
+			diff -u tmp_err_bash  tmp_err_minishell  > "${output_dir}/${i}.err.diff" || true
+			echo "---- Diff STDOUT for test $i ----"
+			diff -u tmp_out_bash tmp_out_minishell | sed 's/^/    /'
+			echo "---- Diff STDERR for test $i ----"
+			diff -u tmp_err_bash tmp_err_minishell | sed 's/^/    /'
 			else
 				echo -ne "✅  "
 				((TEST_OK++))
