@@ -1,176 +1,119 @@
+# 📖 42_minishell_tester
 
-<h1 align=center>📖 42_minishell_tester</h1>
-<img align=center src="https://github.com/zstenger93/42_minishell_tester/blob/master/tester.png">
+## Sommaire
 
-# Menu
-
-[Setup](#setup)
-
-[Usage](#how-to-launch-the-tester)
-
-[Options](#options)
-
-[Install & Run](#how-to-install-and-run)
-
-[Updates](#updates)
-
-[Disclaimer](#disclaimer)
-
-[Contributors](#the-people-made-this-tester-possible)
+- [📖 42_minishell_tester](#-42_minishell_tester)
+  - [Sommaire](#sommaire)
+  - [Installation](#installation)
+  - [Utilisation](#utilisation)
+    - [Mode de test principal](#mode-de-test-principal)
+    - [Filtres optionnels (pour modes `m` et `vm`)](#filtres-optionnels-pour-modes-m-et-vm)
+  - [Installation et exécution](#installation-et-exécution)
+  - [Journalisation des tests](#journalisation-des-tests)
+  - [Mises à jour](#mises-à-jour)
+  - [Avertissement](#avertissement)
+  - [Contributeurs](#contributeurs)
 
 ---
 
-# Setup
-First you should comment out everything what prints to terminal eg "exit" at exit, printf's for debugging etc
-Then modify your main loop:
-You should only read with readline and use your own prompt when you launch the program by yourself typing ./minihsell into the terminal, you can check it this way:
+## Installation
 
-
-```c
-	if (isatty(fileno(stdin)))
-		shell->prompt = readline(shell->terminal_prompt);
-```
-
-Else if it is opened by another program/tester for example then use gnl as follows
+Commencez par commenter toutes les sorties vers le terminal dans votre minishell (par exemple les
+`printf` de débogage ou l’affichage d’un message `exit`). Puis adaptez votre boucle principale pour
+distinguer deux modes de lecture :
 
 ```c
-	char *line;
-	line = get_next_line(fileno(stdin));
-	shell->prompt = ft_strtrim(line, "\n");
-	free(line);
+if (isatty(fileno(stdin)))
+    shell->prompt = readline(shell->terminal_prompt);
+else {
+    char *line = get_next_line(fileno(stdin));
+    shell->prompt = ft_strtrim(line, "\n");
+    free(line);
+}
 ```
 
-So it should look like something like this:
+Cette modification permet au tester de fournir les commandes directement via l’entrée standard.
 
-```c
-	if (isatty(fileno(stdin)))
-		shell->prompt = readline(shell->terminal_prompt);
-	else
-	{
-		char *line;
-		line = get_next_line(fileno(stdin));
-		shell->prompt = ft_strtrim(line, "\n");
-		free(line);
-	}
-```
+## Utilisation
 
-I think from this you pretty much can figure it out, it isn't a big change :)
-
----
-
-# How To Launch The Tester
-Clone it to the root of your minishell
-
-cd to the testers folder
-## Options
+Placez-vous à la racine de votre projet minishell, puis dans le dossier `42_minishell_tester`,
+lancez :
 
 ```bash
-bash tester.sh [m vm ne d b a] {b, builtins, pa, parsing, r, redirections, pi, pipelines, c, cmds, v, variables, co, corrections, path, s, syntax}
-	m				# Mandatory tests
-	vm				# Mandatory tests with valgrind
-	ne				# Mandatory tests without environment
-	d				# Mandatory pipe segfault test (BRUTAL)
-	b				# Bonus tests
-	a				# All the tests
-
-	For the mandatory and valgrind mandatory tests, additionnal flags can be specified :
-
-	b, builtins			# builtins-specific tests
-	pa, parsing			# parsing-specific tests
-	r, redirections			# redirections-specific tests
-	pi, pipelines			# pipelines-specific tests
-	c, cmds				# full-commands tests
-	v, variables			# environment variables tests
-	co, corrections			# corrections' subject tests
-	path				# path resolving tests
-	s, syntax			# syntax errors tests
+bash tester.sh [m | vm | ne | d | b | a] [b | builtins] [pa | parsing] [r | redirections] [pi | pipelines] [c | cmds] [v | variables] [co | corrections] [path] [s | syntax]
 ```
 
+### Mode de test principal
 
----
+- `m` : tests obligatoires
+- `vm` : tests obligatoires avec valgrind
+- `ne` : tests sans environnement
+- `d` : test de segfault (mode « brutal »)
+- `b` : tests bonus
+- `a` : tous les tests
 
-# How To Install and Run
+### Filtres optionnels (pour modes `m` et `vm`)
 
-To install the script, copy and run following command:
+- `b` ou `builtins` : tests sur les builtins
+- `pa` ou `parsing` : tests de parsing
+- `r` ou `redirections` : tests de redirections
+- `pi` ou `pipelines` : tests de pipelines
+- `c` ou `cmds` : tests de commandes
+- `v` ou `variables` : tests de variables d’environnement
+- `co` ou `corrections` : tests de corrections sujet
+- `path` : tests de résolution de chemin
+- `s` ou `syntax` : tests d’erreurs de syntaxe
 
+## Installation et exécution
+
+Pour installer le script automatiquement :
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/RaphyStoll/42_minishell_tester/master/install.sh)"
 ```
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/zstenger93/42_minishell_tester/master/install.sh)" 
-```
 
-The tester will be installed in the `$HOME/42_minishell_tester` directory.
+Le tester sera installé dans `\$HOME/42_minishell_tester` et un alias `mstest` sera ajouté à votre
+`.zshrc` ou `.bashrc`. Vous pourrez alors simplement faire :
 
-After installation an alias `mstest` will be automaticly added in `.zshrc` or `.bashrc`
-
-So that you can run the program in any directory (where your minishell is) by calling
-
-```
+```bash
 mstest
 ```
 
----
+## Journalisation des tests
 
-# Updates
-Tests without environment now are updated, separated and can be run with:
+Ce fork ajoute un système de **journalisation complète** des exécutions : tous les retours de vos
+tests (STDOUT, STDERR, codes de sortie, fuites mémoire, etc.) sont automatiquement enregistrés dans
+un dossier `mstest_log_<TIMESTAMP>` généré à chaque lancement :
 
-```bash
-bash tester.sh ne
-```
+- `init.log` : informations et contexte de démarrage (répertoires, utilisateur, etc.)
+- `debug.log` : traces internes et étapes de traitement des tests
+- `stdout.log` : sorties standard cumulées de tous les tests
+- Dossiers `FALLBACK_<SECTION>` : logs détaillés (`.log`) par test pour chaque section
+- `tests_sans_section` : tests pour lesquels la section n’a pas pu être déterminée
+- `EMERGENCY_LOGS` : cas de log non créés dans leur dossier prévu
 
-Now they should be working better, still don't trust it 100% and do test yourself as well to understand.
-It's a bit tricky to do test's well in this case because if you run `env -i bash` it disables only partially.
-It will still have most things, but if you do `unset PATH` afterwards, will see the difference.
-Also this part is pretty much what you aren't required to handle.
-The main point is to not to crash/segfault when you launch without environment.
+Vous pouvez également archiver automatiquement les anciens logs dans un sous‑dossier `archived_logs`
+pour ne garder en racine que les éléments essentiels.
 
----
+## Mises à jour
 
-# Disclaimer
+- Les tests sans environnement (`ne`) sont désormais séparés et mis à jour :
+  ```bash
+  bash tester.sh ne
+  ```
+- Toujours vérifier manuellement et ne pas vous fier uniquement au tester.
 
-DO NOT FAIL SOMEONE BECAUSE THEY AREN'T PASSING ALL TESTS!
+## Avertissement
 
-NEITHER LET THEM PASS JUST BECAUSE THEY DO, CHECK THE CODE WELL!
+- Ne pas pénaliser un candidat uniquement parce qu’il ne passe pas tous les tests ; inspectez le
+  code.
+- Ne pas valider quelqu’un uniquement parce que tous les tests passent ; revoyez les cas limites.
+- Les vérifications de fuite de mémoire sont indicatives ; effectuez également vos propres tests.
+- Si un test bloque en boucle, vous pouvez le commenter temporairement dans le fichier de test.
 
-DO YOUR OWN TESTING. TRY TO BREAK IT! ^^
+## Contributeurs
 
-HAVE FUN WITH YOUR BEAUTIFUL MINISHELL
-
-Don't trust 100% the leak check, try it yourself as well and the linked tester below
-Try to write your own test first and don't just run a tester mindlessly
-You don't have to pass all the cases in this tester
-If you want to check leaks outside of your manual checking:
-
-[This is also a good one to check valgrind](https://github.com/thallard/minishell_tester)
-A bit more time to set it up, but worth it
-The first time if you run the tester above and expect a lot of errors
-Then redirect each of the output from stdin and strerror to a file otherwise you won't be able see all of the errors
-
-Even though the required changes have been made to your proram, it might still going to throw you only KO STD_OUT.
-This is because readline version. (then you probably have the older version where it isn't checking where does the input coming from(the tester or you))
-
-If a test just hanging in infinite loop, you can use the link to go there and comment it out in the test file until you fix it.
-
----
-
-# The People Made This Tester Possible
-
-Base made by: [Tim](https://github.com/tjensen42) & [Hepple](https://github.com/hepple42)
-
-Upgraded by: [Zsolt](https://github.com/zstenger93)
-
-Parsing hell and mini_death by: [Kārlis](https://github.com/kvebers)
-
-Extra bonus tests by: [Mouad](https://github.com/moabid42)
-
-and
-
-```
-My minishell pain
-```
----
-
-Later on I might make changes so you can run test for each part like cd, echo, pipes, redirs etc.. as well
-Or if someone takes on the challenge, you are welcome to do so.
-
-Feel free to ask on slack if you have a question
-Or open a pull request if you would like to add more tests
-Looking for people who would like to add more tests to the bonus part, because we haven't done it
+- Base initiale : [Tim](https://github.com/tjensen42) & [Hepple](https://github.com/hepple42)
+- Améliorations : [Zsolt](https://github.com/zstenger93)
+- Parsing hell & mini_death : [Kārlis](https://github.com/kvebers)
+- Tests bonus : [Mouad](https://github.com/moabid42)
