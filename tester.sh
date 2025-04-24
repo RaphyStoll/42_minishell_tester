@@ -42,6 +42,55 @@ THREE=0
 GOOD_TEST=0
 LEAKS=0
 
+# -----------------------  IGNORED TESTS  -----------------------
+declare -A IGNORED_SECTION_ALL          # sections ignorées entièrement
+declare -A IGNORED_TESTS                # clef "SECTION:NUM" -> 1
+IGNORED_COUNT=0
+
+# Charge le premier fichier ignore*.txt|md|sh présent dans le dossier d'où
+# on lance mstest.
+load_ignored_tests() {
+    local ignore_file
+    for f in "$INVOKED_PWD"/ignore*{.txt,.md,.sh}; do
+        [[ -f $f ]] && { ignore_file=$f; break; }
+    done
+    [[ -z $ignore_file ]] && return
+
+    while IFS= read -r line; do
+        [[ $line == \#* || -z $line ]] && continue          # commentaires / vide
+        line=${line//[[:space:]]/}                          # supprimer espaces
+        local section=${line%%:*}; local rest=${line#*:}
+        [[ -z $section || -z $rest ]] && continue
+        section=$(echo "$section" | tr '[:lower:]' '[:upper:]')
+
+        if [[ $rest == "*" ]]; then                        # ignorer toute section
+            IGNORED_SECTION_ALL[$section]=1
+            continue
+        fi
+
+        IFS=',' read -ra parts <<< "$rest"
+        for part in "${parts[@]}"; do
+            if [[ $part == *-* ]]; then                    # intervalle 4-8
+                local start=${part%-*}; local end=${part#*-}
+                for ((n=start;n<=end;n++)); do
+                    IGNORED_TESTS["$section:$n"]=1
+                done
+            else                                           # numéro isolé
+                IGNORED_TESTS["$section:$part"]=1
+            fi
+        done
+    done < "$ignore_file"
+}
+
+# Renvoie 0 (=true) si le test doit être ignoré
+is_ignored() {
+    local section=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+    local num=$2
+    [[ ${IGNORED_SECTION_ALL[$section]+_} ]] && return 0
+    [[ ${IGNORED_TESTS["$section:$num"]+_} ]] && return 0
+    return 1
+}
+
 USE_COLORS=1
 
 TESTFILES=""
@@ -541,7 +590,22 @@ process_test_file() {
             
             # Sauvegarder l'entrée originale
             local ORIGINAL_INPUT="$INPUT"
-            
+
+			# Test ignoré ?
+            if is_ignored "$section_upper" "$i"; then
+                if [[ $USE_COLORS -eq 1 ]]; then
+                    echo -e "\033[0;90m⏭️  IGNORÉ\033[m" | tee -a "${STDOUT_LOG}"
+                else
+                    echo "IGNORÉ" | tee -a "${STDOUT_LOG}"
+                fi
+                ((IGNORED_COUNT++))
+                print_test_location "$file" "$tmp_line_count"
+                INPUT=""
+                ((i++))
+                ((TEST_COUNT++))
+                continue
+            fi
+
             # Exécuter les commandes
             local exit_values=$(run_command "$INPUT" $with_env)
             local exit_minishell=$(echo $exit_values | cut -d' ' -f1)
@@ -712,6 +776,8 @@ main() {
     # Vérifier si minishell est compilé
     check_minishell_exists
     
+    load_ignored_tests
+
     # Exécuter les tests selon le mode demandé
     case $1 in
         "m")

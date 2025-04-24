@@ -1,0 +1,37 @@
+# ------------------------------------------------------------------
+# ignored_tests.txt  –  liste des tests à ignorer
+#
+# ➊ Une ligne par section. Nom de section (tout ou partie) avant « : »
+# ➋ Après « : » —
+#     * rien           → on n’ignore aucun test de cette section
+#     * *              → on ignore TOUTE la section
+#     * 3              → on ignore le test 3
+#     * 5,7,10-12      → liste de numéros ou intervalles séparés par ,
+# ➌ Les blancs et tabulations sont ignorés. Les lignes débutant par # sont des commentaires.
+# ------------------------------------------------------------------
+
+# Exemple :
+# builtins: 42, 260-265     ← masquera les tests #42 et #260 à #265 inclus
+
+# ─── SECTIONS MANDATORY ────────────────────────────────────────────
+builtins:
+parsing:
+redirections:
+pipelines:
+cmds:
+variables:
+syntax:
+path:
+
+# ─── SECTION DE COMPARAISON PARSING (bonus) ───────────────────────
+compare_parsing:
+
+# ─── SECTION PARSING HELL (bonus) ─────────────────────────────────
+parsing_hell:
+
+# ─── SECTIONS BONUS / PROJECT-SPECIFIC ────────────────────────────
+bonus:
+mini_death:
+env:
+
+# Ajoutez ou supprimez des lignes selon vos besoins
