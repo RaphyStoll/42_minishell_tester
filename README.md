@@ -11,7 +11,6 @@
   - [Installation et exécution](#installation-et-exécution)
   - [Journalisation des tests](#journalisation-des-tests)
   - [Mises à jour](#mises-à-jour)
-  - [Avertissement](#avertissement)
   - [Contributeurs](#contributeurs)
 
 ---
@@ -66,6 +65,16 @@ bash tester.sh [m | vm | ne | d | b | a] [b | builtins] [pa | parsing] [r | redi
 
 ## Installation et exécution
 
+> **Important :** assurez‑vous que **bash** et votre **minishell** utilisent la même locale, sans
+> quoi les messages d’erreur différeront et le tester signalera de faux négatifs.  
+> Par précaution, placez :
+>
+> ```bash
+> export LANG=en_US.UTF-8
+> ```
+>
+> avant de lancer le script.
+
 Pour installer le script automatiquement :
 
 ```bash
@@ -103,10 +112,9 @@ pour ne garder en racine que les éléments essentiels.
   ```
 - Toujours vérifier manuellement et ne pas vous fier uniquement au tester.
 
-## Avertissement
-
 - Ne pas pénaliser un candidat uniquement parce qu’il ne passe pas tous les tests ; inspectez le
   code.
+
 - Ne pas valider quelqu’un uniquement parce que tous les tests passent ; revoyez les cas limites.
 - Les vérifications de fuite de mémoire sont indicatives ; effectuez également vos propres tests.
 - Si un test bloque en boucle, vous pouvez le commenter temporairement dans le fichier de test.

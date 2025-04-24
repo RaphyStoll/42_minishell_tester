@@ -378,14 +378,39 @@ run_command() {
     echo "$exit_minishell $exit_bash"
 }
 
+# Sanitize outputs before comparing: strip ANSI codes and drop lines that echo the original command
+sanitize_output() {
+    local in_file=$1
+    local orig_input="$2"
+    local pattern_file
+    pattern_file=$(mktemp)
+
+    # Build a pattern file containing every line of the original input (empty lines removed)
+    printf "%s\n" "$orig_input" | sed '/^$/d' > "$pattern_file"
+
+    # 1) remove ANSI escape sequences
+    # 2) filter out any line that exactly matches one of the original input lines
+    #    (e.g., minishell echoing the command)
+    sed -e 's/\x1B\[[0-9;]*[A-Za-z]//g' "$in_file" | grep -Fvxf "$pattern_file"
+
+    rm -f "$pattern_file"
+}
+
 # Vérifie la différence de sortie standard entre minishell et bash
 check_stdout() {
-    if ! diff -q tmp_out_minishell tmp_out_bash >/dev/null; then
+    local orig_input="$1"
+
+    sanitize_output tmp_out_minishell "$orig_input" > tmp_out_minishell.clean
+    sanitize_output tmp_out_bash      "$orig_input" > tmp_out_bash.clean
+
+    if ! diff -q tmp_out_minishell.clean tmp_out_bash.clean >/dev/null; then
+        rm -f tmp_out_minishell.clean tmp_out_bash.clean
         print_stdout_result 1
         ((TEST_KO_OUT++))
         ((FAILED++))
         return 1
     else
+        rm -f tmp_out_minishell.clean tmp_out_bash.clean
         print_stdout_result 0
         ((TEST_OK++))
         ((ONE++))
@@ -528,7 +553,7 @@ process_test_file() {
             local failed_exit=0
             local has_leaks=0
             
-            check_stdout || failed_stdout=1
+            check_stdout "$ORIGINAL_INPUT" || failed_stdout=1
             check_stderr || failed_stderr=1
             check_exitcode $exit_minishell $exit_bash $verbose_exit || failed_exit=1
             
